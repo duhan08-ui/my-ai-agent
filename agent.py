@@ -16,8 +16,8 @@ def ask_gemini_to_fix(filename, error_msg):
     prompt = f"Fix the Python error below. Output ONLY the fixed code.\nError: {error_msg}\nCode: {code}"
     
     host = "generativelanguage.googleapis.com"
-    # ⭐ 현재 가장 가동률이 높은 v1beta와 1.5-flash 조합입니다.
-    endpoint = f"/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    # ⭐ 목록에서 확인된 최신 모델명을 사용합니다!
+    endpoint = f"/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key={GEMINI_API_KEY}"
 
     conn = http.client.HTTPSConnection(host)
     payload = json.dumps({
@@ -33,14 +33,10 @@ def ask_gemini_to_fix(filename, error_msg):
 
         if 'candidates' in data:
             fixed_code = data['candidates'][0]['content']['parts'][0]['text']
+            # 마크다운 기호(```) 제거
             return fixed_code.replace("```python", "").replace("```", "").strip()
         else:
-            print("❌ API 호출 실패! 현재 사용 가능한 모델 목록을 확인합니다...")
-            # 🔍 여기서 어떤 모델이 사용 가능한지 서버에 직접 물어봅니다.
-            list_endpoint = f"/v1beta/models?key={GEMINI_API_KEY}"
-            conn.request("GET", list_endpoint)
-            list_res = conn.getresponse().read().decode("utf-8")
-            print(f"⚠️ 사용 가능 모델 목록: {list_res}")
+            print(f"❌ API 실패 상세: {response_text}")
             sys.exit(1)
             
     except Exception as e:
@@ -65,6 +61,7 @@ def run_and_fix(filename):
         print(f"✅ 최종 결과: {final_res.stdout if final_res.returncode == 0 else final_res.stderr}")
 
 if __name__ == "__main__":
+    # 에러 유발 파일 생성
     with open("happy.py", "w", encoding='utf-8') as f:
         f.write("print(10 / 0)")
     run_and_fix("happy.py")
