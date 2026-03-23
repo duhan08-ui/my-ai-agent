@@ -17,80 +17,57 @@ def ask_gemini_to_fix(filename, error_msg):
     with open(filename, 'r', encoding='utf-8') as f:
         code = f.read()
 
-    # AI에게 보낼 지시문 (프롬프트)
-    prompt = f"""
-    다음 파이썬 코드에서 에러가 발생했습니다. 코드를 분석해서 수정해줘.
-    
-    [에러 메시지]:
-    {error_msg}
-    
-    [원본 코드]:
-    {code}
-    
-    주의사항: 다른 설명은 하지 말고, 오직 수정된 파이썬 코드만 출력해줘. 
-    마크다운 기호(```)도 쓰지 마.
-    """
+    prompt = f"다음 파이썬 코드의 에러를 수정해줘. 코드만 출력해.\n\n[에러]:\n{error_msg}\n\n[코드]:\n{code}"
 
-    # Google Gemini API 호출 설정
     conn = http.client.HTTPSConnection("generativelanguage.googleapis.com")
     payload = json.dumps({
         "contents": [{"parts": [{"text": prompt}]}]
     })
     headers = {'Content-Type': 'application/json'}
     
-    # 🔗 최신 모델 경로 설정 (v1beta + gemini-1.5-flash)
-    endpoint = f"/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    # ⭐ 404 해결 포인트: 모델명 앞에 'models/'를 붙이지 않고 호출해봅니다.
+    # 혹은 v1beta를 사용하되 주소를 가장 단순화합니다.
+    endpoint = f"/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     
-    # API 요청 보내기
-    conn.request("POST", endpoint, payload, headers)
-    
-    res = conn.getresponse()
-    response_data = res.read().decode("utf-8")
-    data = json.loads(response_data)
+    try:
+        conn.request("POST", endpoint, payload, headers)
+        res = conn.getresponse()
+        response_data = res.read().decode("utf-8")
+        data = json.loads(response_data)
 
-    # 응답 데이터 분석 및 에러 핸들링
-    if 'candidates' not in data:
-        print("❌ Gemini API 응답에서 정답을 찾을 수 없습니다.")
-        print(f"⚠️ API 응답 내용: {response_data}")
+        if 'candidates' not in data:
+            # 💡 만약 또 404가 나면 다른 모델명으로 즉시 재시도하는 로직
+            print("🔄 모델명을 변경하여 재시도 중 (gemini-pro)...")
+            alt_endpoint = f"/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+            conn.request("POST", alt_endpoint, payload, headers)
+            res = conn.getresponse()
+            response_data = res.read().decode("utf-8")
+            data = json.loads(response_data)
+
+        # 응답 추출
+        fixed_code = data['candidates'][0]['content']['parts'][0]['text']
+        return fixed_code.replace("```python", "").replace("```", "").strip()
+
+    except Exception as e:
+        print(f"❌ 통신 에러: {e}")
+        print(f"⚠️ 응답 내용: {response_data}")
         sys.exit(1)
-
-    # AI가 준 답변 추출 및 정제
-    fixed_code = data['candidates'][0]['content']['parts'][0]['text']
-    fixed_code = fixed_code.replace("```python", "").replace("```", "").strip()
-    
-    return fixed_code
 
 def run_and_fix(filename):
     print(f"🚀 [{filename}] 실행 시도 중...")
-    
-    # 현재 환경의 파이썬으로 실행
-    result = subprocess.run(
-        [sys.executable, filename],
-        capture_output=True, 
-        text=True
-    )
+    result = subprocess.run([sys.executable, filename], capture_output=True, text=True)
 
     if result.returncode == 0:
         print("✅ 실행 성공! 결과:\n", result.stdout)
     else:
-        print("❌ 에러 발생! AI 분석을 시작합니다.")
-        error_msg = result.stderr
-        print(f"⚠️ 발생한 에러: {error_msg}")
-        
-        # AI 수리 요청
-        fixed_code = ask_gemini_to_fix(filename, error_msg)
-        
-        # 수리된 코드로 파일 덮어쓰기
+        print("❌ 에러 발생! AI 분석 시작.")
+        fixed_code = ask_gemini_to_fix(filename, result.stderr)
         with open(filename, "w", encoding='utf-8') as f:
             f.write(fixed_code)
-        
-        print(f"🛠️ {filename} 자가 수리 완료. 다시 검증합니다.")
-        # 재실행하여 확인
+        print(f"🛠️ {filename} 자가 수리 완료. 재검증합니다.")
         run_and_fix(filename)
 
 if __name__ == "__main__":
-    # 테스트용: 0으로 나누기 에러 코드 생성
     with open("happy.py", "w", encoding='utf-8') as f:
         f.write("print('결과는:', 10 / 0)")
-        
     run_and_fix("happy.py")
