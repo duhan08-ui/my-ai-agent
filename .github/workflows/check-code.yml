@@ -1,19 +1,25 @@
 name: AI-Agent-Check
-on: [push]
-jobs:
-  test-in-docker:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
 
-      - name: Build and Run
-        env:
-          # 1. GitHub Secrets에서 키를 가져와서 서버 변수로 저장
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          # 도커 이미지를 빌드합니다.
-          docker build -t my-agent .
-          
-          # 2. 빌드된 도커를 실행할 때, -e 옵션으로 환경변수를 '주입'합니다.
-          docker run --rm -e GEMINI_API_KEY=$GEMINI_API_KEY my-agent python agent.py
+on:
+  push:
+    branches: [ "main" ]  # main 브랜치에 코드가 올라오면 실행
+  workflow_dispatch:      # 이 줄이 있어야 아까 찾던 [Run workflow] 버튼이 생깁니다!
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+
+    - name: Run AI Agent
+      env:
+        # 🔑 우리가 등록한 새 API 키를 환경변수로 연결합니다.
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      run: |
+        python agent.py
