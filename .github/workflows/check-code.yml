@@ -6,7 +6,14 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+
       - name: Build and Run
+        env:
+          # 1. GitHub Secrets에서 키를 가져와서 서버 변수로 저장
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
+          # 도커 이미지를 빌드합니다.
           docker build -t my-agent .
-          docker run --rm my-agent python agent.py
+          
+          # 2. 빌드된 도커를 실행할 때, -e 옵션으로 환경변수를 '주입'합니다.
+          docker run --rm -e GEMINI_API_KEY=$GEMINI_API_KEY my-agent python agent.py
