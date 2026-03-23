@@ -37,6 +37,7 @@ TOPIS_INFO_URL = "https://topis.seoul.go.kr/map/selectCctvInfo.do"
 ALLOWED_PROXY_DOMAINS = [
     "topis.seoul.go.kr",
     "cctvsec.seoul.go.kr",
+    "eseoul.go.kr",
     "210.179.218.",
 ]
 
