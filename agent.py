@@ -38,8 +38,10 @@ def ask_gemini_to_fix(filename, error_msg):
     })
     headers = {'Content-Type': 'application/json'}
     
+    # 🔗 모델 경로와 API 키 결합 (들여쓰기 4칸 확인!)
+    endpoint = f"/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+    
     # API 요청 보내기
-   endpoint = f"/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
     conn.request("POST", endpoint, payload, headers)
     
     res = conn.getresponse()
@@ -61,7 +63,7 @@ def ask_gemini_to_fix(filename, error_msg):
 def run_and_fix(filename):
     print(f"🚀 [{filename}] 실행 시도 중...")
     
-    # 도커 내부가 아닌 현재 파이썬 환경에서 직접 실행
+    # 현재 파이썬 환경에서 직접 실행
     result = subprocess.run(
         [sys.executable, filename],
         capture_output=True, 
