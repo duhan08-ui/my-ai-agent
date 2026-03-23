@@ -39,7 +39,7 @@ def ask_gemini_to_fix(filename, error_msg):
     headers = {'Content-Type': 'application/json'}
     
     # API 요청 보내기
-    endpoint = f"/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    endpoint = f"/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     conn.request("POST", endpoint, payload, headers)
     
     res = conn.getresponse()
