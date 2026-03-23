@@ -1,0 +1,1 @@
+name: AI Agent Auto Check`n`non: [push]`n`njobs:`n  test-in-docker:`n    runs-on: ubuntu-latest`n    steps:`n      - name: Code Checkout`n        uses: actions/checkout@v3`n      - name: Build and Run`n        run: |`n          docker build -t my-agent .`n          docker run --rm my-agent python agent.py
