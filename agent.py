@@ -71,3 +71,4 @@ if __name__ == "__main__":
     with open("happy.py", "w", encoding='utf-8') as f:
         f.write("print('결과는:', 10 / 0)")
     run_and_fix("happy.py")
+
