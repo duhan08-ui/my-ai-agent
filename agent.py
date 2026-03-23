@@ -5,7 +5,7 @@ import http.client
 import json
 
 # 🔑 여기에 발급받은 API 키를 넣으세요!
-GEMINI_API_KEY = "여기에_복사한_키를_넣으세요"
+GEMINI_API_KEY = "mythical-legend-431904-g4"
 
 def ask_gemini_to_fix(filename, error_msg):
     print("🤖 Gemini AI에게 수리를 요청하는 중...")
