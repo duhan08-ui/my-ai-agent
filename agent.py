@@ -4,7 +4,7 @@ import os
 import http.client
 import json
 
-# 🔒 GitHub Secrets에서 API 키를 가져옵니다.
+# 🔒 GitHub Secrets에서 가져오기
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 def ask_gemini_to_fix(filename, error_msg):
@@ -13,62 +13,60 @@ def ask_gemini_to_fix(filename, error_msg):
     with open(filename, 'r', encoding='utf-8') as f:
         code = f.read()
 
-    prompt = f"Fix this Python code error. Output only the fixed code without backticks.\n\n[Error]:\n{error_msg}\n\n[Code]:\n{code}"
+    # AI에게 보낼 요청 데이터 구성
+    prompt = f"Fix the following Python error. Output ONLY the fixed code.\nError: {error_msg}\nCode: {code}"
+    
+    # 🔗 구글이 권장하는 가장 표준적인 REST API 주소 체계
+    host = "generativelanguage.googleapis.com"
+    # 모델명에서 '-latest'나 버전 숫자를 모두 빼고 가장 기본형을 씁니다.
+    endpoint = f"/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
-    conn = http.client.HTTPSConnection("generativelanguage.googleapis.com")
+    conn = http.client.HTTPSConnection(host)
     payload = json.dumps({
         "contents": [{"parts": [{"text": prompt}]}]
     })
     headers = {'Content-Type': 'application/json'}
-    
-    # ⭐ 핵심 변경: 모델명 뒤에 '-latest'를 붙이고 v1beta를 사용합니다.
-    # 이 조합이 현재 가장 성공률이 높습니다.
-    endpoint = f"/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
-    
+
     try:
         conn.request("POST", endpoint, payload, headers)
         res = conn.getresponse()
-        data = json.loads(res.read().decode("utf-8"))
+        response_text = res.read().decode("utf-8")
+        data = json.loads(response_text)
 
+        # 성공적으로 답변을 받았을 때
         if 'candidates' in data:
             fixed_code = data['candidates'][0]['content']['parts'][0]['text']
-            return fixed_code.strip().replace("```python", "").replace("```", "")
+            # 불필요한 마크다운 기호 제거
+            return fixed_code.replace("```python", "").replace("```", "").strip()
         else:
-            # 🔄 만약 위 모델도 안되면, 구형이지만 안정적인 'gemini-pro'로 마지막 시도
-            print("🔄 모델명을 gemini-pro로 변경하여 마지막 시도 중...")
-            alt_endpoint = f"/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
-            conn.request("POST", alt_endpoint, payload, headers)
-            res = conn.getresponse()
-            data = json.loads(res.read().decode("utf-8"))
+            # ❌ 만약 또 404가 나면 로그에 상세 원인 출력
+            print(f"❌ API 응답 실패: {response_text}")
+            sys.exit(1)
             
-            if 'candidates' in data:
-                return data['candidates'][0]['content']['parts'][0]['text'].strip().replace("```python", "").replace("```", "")
-            else:
-                print(f"❌ 모든 모델 호출 실패: {data}")
-                sys.exit(1)
-
     except Exception as e:
-        print(f"❌ 시스템 에러: {e}")
+        print(f"❌ 통신 중 오류 발생: {e}")
         sys.exit(1)
 
 def run_and_fix(filename):
-    print(f"🚀 [{filename}] 실행 시도 중...")
+    print(f"🚀 [{filename}] 실행 시도...")
     result = subprocess.run([sys.executable, filename], capture_output=True, text=True)
 
     if result.returncode == 0:
-        print("✅ 실행 성공! 결과:\n", result.stdout)
+        print("✅ 성공! 결과:\n", result.stdout)
     else:
-        print("❌ 에러 발생! AI 분석 시작.")
+        print("❌ 에러 발생! AI에게 수리를 요청합니다.")
         fixed_code = ask_gemini_to_fix(filename, result.stderr)
+        
         with open(filename, "w", encoding='utf-8') as f:
             f.write(fixed_code)
-        print(f"🛠️ {filename} 자가 수리 완료. 재실행 합니다.")
-        
-        # 다시 실행해서 결과 확인
+            
+        print(f"🛠️ {filename} 자가 수리 완료. 다시 검증합니다.")
+        # 재실행 확인
         final_res = subprocess.run([sys.executable, filename], capture_output=True, text=True)
-        print(f"✅ 수리 후 최종 결과: {final_res.stdout if final_res.returncode == 0 else final_res.stderr}")
+        print(f"✅ 최종 결과: {final_res.stdout if final_res.returncode == 0 else final_res.stderr}")
 
 if __name__ == "__main__":
+    # 에러 유발 파일 생성
     with open("happy.py", "w", encoding='utf-8') as f:
-        f.write("print('결과는:', 10 / 0)")
+        f.write("print(10 / 0)")
     run_and_fix("happy.py")
