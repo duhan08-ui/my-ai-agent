@@ -38,8 +38,8 @@ def ask_gemini_to_fix(filename, error_msg):
     })
     headers = {'Content-Type': 'application/json'}
     
-    # 🔗 모델 경로와 API 키 결합 (들여쓰기 4칸 확인!)
-    endpoint = f"/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+    # 🔗 최신 모델 경로 설정 (v1beta + gemini-1.5-flash)
+    endpoint = f"/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     
     # API 요청 보내기
     conn.request("POST", endpoint, payload, headers)
@@ -63,7 +63,7 @@ def ask_gemini_to_fix(filename, error_msg):
 def run_and_fix(filename):
     print(f"🚀 [{filename}] 실행 시도 중...")
     
-    # 현재 파이썬 환경에서 직접 실행
+    # 현재 환경의 파이썬으로 실행
     result = subprocess.run(
         [sys.executable, filename],
         capture_output=True, 
@@ -89,7 +89,7 @@ def run_and_fix(filename):
         run_and_fix(filename)
 
 if __name__ == "__main__":
-    # 연습용: 일부러 에러가 나는 코드 생성 (0으로 나누기)
+    # 테스트용: 0으로 나누기 에러 코드 생성
     with open("happy.py", "w", encoding='utf-8') as f:
         f.write("print('결과는:', 10 / 0)")
         
